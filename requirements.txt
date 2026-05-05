@@ -1,0 +1,6 @@
+Flask==3.0.3
+flasgger==0.9.7.1
+Pillow==10.4.0
+cloudinary==1.41.0
+flask-cors==4.0.1
+python-dotenv==1.0.1
