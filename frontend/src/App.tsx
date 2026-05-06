@@ -2,7 +2,9 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
-import { Upload, Sparkles, Download, Loader2, ImageIcon } from "lucide-react";
+import { Upload, Sparkles, Download, Loader2, ImageIcon, RotateCcw } from "lucide-react";
+import { enhanceImage, downloadImage } from "@/services/post-image";
+import axios from "axios";
 
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
@@ -31,35 +33,33 @@ export default function App() {
     setResultUrl(null);
 
     try {
-      // TODO: Connect to your API endpoint later
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await fetch("/api/enhance", { method: "POST", body: fd });
-      const text = await res.text();
-      if (!res.ok) throw new Error(text || `Request failed (${res.status})`);
-      const json = JSON.parse(text);
-      if (!json.url) throw new Error("No URL in response");
-      setResultUrl(json.url);
+      const url = await enhanceImage(file);
+      setResultUrl(url);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong");
+      if (axios.isAxiosError(err)) {
+        setError(err.response?.data?.error || err.message);
+      } else {
+        setError(err instanceof Error ? err.message : "Something went wrong");
+      }
     } finally {
       setLoading(false);
     }
   };
 
+  const handleReset = () => {
+    setFile(null);
+    setResultUrl(null);
+    setError(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+    if (inputRef.current) inputRef.current.value = "";
+  };
+
   const handleDownload = async () => {
     if (!resultUrl) return;
+    const filename = `enhanced-${file?.name || "image.png"}`;
     try {
-      const response = await fetch(resultUrl);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `enhanced-${file?.name || "image.png"}`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
+      await downloadImage(resultUrl, filename);
     } catch {
       window.open(resultUrl, "_blank");
     }
@@ -156,13 +156,22 @@ export default function App() {
             </div>
 
             {resultUrl && (
-              <Button
-                onClick={handleDownload}
-                variant="outline"
-                className="mt-4 w-full"
-              >
-                <Download className="mr-2 h-4 w-4" /> Download enhanced image
-              </Button>
+              <div className="mt-4 flex gap-3">
+                <Button
+                  onClick={handleDownload}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <Download className="mr-2 h-4 w-4" /> Download
+                </Button>
+                <Button
+                  onClick={handleReset}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" /> Enhance another
+                </Button>
+              </div>
             )}
           </Card>
         </div>
