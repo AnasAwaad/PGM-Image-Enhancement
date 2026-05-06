@@ -1,8 +1,5 @@
-
-
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Upload, Sparkles, Download, Loader2, ImageIcon } from "lucide-react";
@@ -10,9 +7,6 @@ import { Upload, Sparkles, Download, Loader2, ImageIcon } from "lucide-react";
 export default function App() {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [d0, setD0] = useState("");
-  const [a, setA] = useState("");
-  const [b, setB] = useState("");
   const [loading, setLoading] = useState(false);
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -35,12 +29,11 @@ export default function App() {
     setLoading(true);
     setError(null);
     setResultUrl(null);
+
     try {
+      // TODO: Connect to your API endpoint later
       const fd = new FormData();
       fd.append("file", file);
-      if (d0) fd.append("d0", d0);
-      if (a) fd.append("a", a);
-      if (b) fd.append("b", b);
       const res = await fetch("/api/enhance", { method: "POST", body: fd });
       const text = await res.text();
       if (!res.ok) throw new Error(text || `Request failed (${res.status})`);
@@ -51,6 +44,24 @@ export default function App() {
       setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDownload = async () => {
+    if (!resultUrl) return;
+    try {
+      const response = await fetch(resultUrl);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `enhanced-${file?.name || "image.png"}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(resultUrl, "_blank");
     }
   };
 
@@ -66,19 +77,20 @@ export default function App() {
             PGM Enhancement
           </h1>
           <p className="mx-auto mt-4 max-w-xl text-balance text-muted-foreground">
-            Upload a PGM, PNG, or JPG, tune the parameters, and get a beautifully enhanced image back.
+            Upload a PGM, PNG, or JPG and get a beautifully enhanced image back.
           </p>
         </header>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <Card className="overflow-hidden border-border bg-card/60 p-6 backdrop-blur-xl" style={{ boxShadow: "var(--shadow-card)" }}>
-            <form onSubmit={submit} className="space-y-6">
-              <div>
+          {/* Upload Card */}
+          <Card className="overflow-hidden border-border bg-card/60 p-6 backdrop-blur-xl shadow-[var(--shadow-card)]">
+            <form onSubmit={submit} className="flex flex-col h-full space-y-6">
+              <div className="flex-1">
                 <Label className="mb-2 block text-sm font-medium">Image</Label>
                 <button
                   type="button"
                   onClick={() => inputRef.current?.click()}
-                  className="group relative flex h-48 w-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-background/40 transition hover:border-primary/60 hover:bg-background/60"
+                  className="group relative flex h-60 w-full items-center justify-center overflow-hidden rounded-lg border border-dashed border-border bg-background/40 transition hover:border-primary/60 hover:bg-background/60"
                 >
                   {previewUrl ? (
                     <img src={previewUrl} alt="preview" className="h-full w-full object-contain" />
@@ -98,26 +110,14 @@ export default function App() {
                 />
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <div>
-                  <Label htmlFor="d0" className="mb-1.5 block text-xs text-muted-foreground">d0</Label>
-                  <Input id="d0" type="number" step="any" value={d0} onChange={(e) => setD0(e.target.value)} placeholder="—" />
-                </div>
-                <div>
-                  <Label htmlFor="a" className="mb-1.5 block text-xs text-muted-foreground">a</Label>
-                  <Input id="a" type="number" step="any" value={a} onChange={(e) => setA(e.target.value)} placeholder="—" />
-                </div>
-                <div>
-                  <Label htmlFor="b" className="mb-1.5 block text-xs text-muted-foreground">b</Label>
-                  <Input id="b" type="number" step="any" value={b} onChange={(e) => setB(e.target.value)} placeholder="—" />
-                </div>
-              </div>
-
               <Button
                 type="submit"
                 disabled={loading || !file}
-                className="w-full text-primary-foreground"
-                style={{ background: "var(--gradient-primary)", boxShadow: "var(--shadow-glow)" }}
+                className="w-full h-11 text-sm font-medium text-white disabled:opacity-60 hover:brightness-110 transition-all"
+                style={{
+                  background: "var(--gradient-primary)",
+                  boxShadow: "var(--shadow-glow)",
+                }}
               >
                 {loading ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Enhancing…</>
@@ -134,19 +134,10 @@ export default function App() {
             </form>
           </Card>
 
-          <Card className="flex flex-col overflow-hidden border-border bg-card/60 p-6 backdrop-blur-xl" style={{ boxShadow: "var(--shadow-card)" }}>
+          {/* Result Card */}
+          <Card className="flex flex-col overflow-hidden border-border bg-card/60 p-6 backdrop-blur-xl shadow-[var(--shadow-card)]">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-medium">Result</h2>
-              {resultUrl && (
-                <a
-                  href={resultUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs text-primary hover:underline"
-                >
-                  <Download className="h-3.5 w-3.5" /> Open
-                </a>
-              )}
             </div>
             <div className="flex flex-1 items-center justify-center rounded-lg border border-border bg-background/40 p-3 min-h-[300px]">
               {loading ? (
@@ -163,6 +154,16 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {resultUrl && (
+              <Button
+                onClick={handleDownload}
+                variant="outline"
+                className="mt-4 w-full"
+              >
+                <Download className="mr-2 h-4 w-4" /> Download enhanced image
+              </Button>
+            )}
           </Card>
         </div>
       </div>
